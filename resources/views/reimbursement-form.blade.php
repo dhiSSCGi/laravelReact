@@ -91,11 +91,17 @@
             color: #555;
         }
 
-        /* 2-column grid */
+     
         .proof-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 12px;
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* ensures equal width columns */
+        }
+
+        .proof-grid td {
+            width: 33.33%;
+            vertical-align: top;
+            padding: 4px; /* less padding = more usable space */
         }
 
         /* Force new page every 6 proofs (3 rows of 2) */
@@ -110,23 +116,23 @@
 
         .proof-item {
             border: 1px solid #ccc;
-            padding: 8px;
-            page-break-inside: avoid;
-            overflow: hidden;
-            height: 320px;        /* fixed height so all cards are equal */
+            padding: 4px;
+            text-align: center;
+            height: 450px;
         }
 
+        /* Make ticket images wider and taller */
         .proof-item img {
-            width: 100%;
-            height: 270px;        /* taller image area */
-            object-fit: contain;
-            display: block;
-            background: #f9f9f9;
+            width: 100%;         
+            height: 420px;        
+            object-fit: contain; 
+            margin: 4px auto;
         }
+
         .proof-item .proof-meta {
             font-size: 10px;
-            margin-bottom: 6px;
-            line-height: 1.5;
+            margin-bottom: 4px;
+            line-height: 1.3;
         }
        
         .pdf-note {
@@ -237,7 +243,7 @@
             <td class="value-cell" colspan="2"></td>
             <td class="label-cell">Reimbursable<br>Amount:</td>
             <td class="value-cell" colspan="2" style="font-weight:bold">
-                ₱{{ number_format($reimbursement->total_amount, 2) }}
+                &#8369;{{ number_format($reimbursement->total_amount, 2) }}
             </td>
         </tr>
         <tr>
@@ -335,47 +341,70 @@
 
     <div class="page-footer">COMPANY INTERNAL USE</div>
 
-    {{-- ── Proof Attachments — 2 columns, 6 per page ── --}}
-    @php
-        $proofTickets = $reimbursement->tickets->filter(fn($t) => $t->proof_url);
-    @endphp
+    {{-- ── Proof Attachments — 3 columns, 6 per page ── --}}
+@php
+    $proofTickets = $reimbursement->tickets->filter(fn($t) => $t->proof_url)->values();
+@endphp
 
-    @if($proofTickets->count() > 0)
-    <div class="proofs-section">
-        <h2>PROOF ATTACHMENTS — Week of {{ $reimbursement->week_start->format('M d') }}–{{ $reimbursement->week_end->format('M d, Y') }}</h2>
-        <p class="proofs-meta">
-            Employee: <strong>{{ $reimbursement->user->name }}</strong>
-            &nbsp;|&nbsp;
-            Total Reimbursable: <strong>₱{{ number_format($reimbursement->total_amount, 2) }}</strong>
-        </p>
+@if($proofTickets->count() > 0)
 
-        <div class="proof-grid">
-            @foreach($proofTickets->values() as $index => $ticket)
-                {{-- Page break after every 6 proofs (insert before the 7th, 13th, etc.) --}}
-                @if($index > 0 && $index % 6 === 0)
-                    <div class="proof-page-break"></div>
+@for($page = 0; $page < ceil($proofTickets->count() / 6); $page++)
+
+<div class="proofs-section">
+
+    <h2>
+        PROOF ATTACHMENTS — Week of 
+        {{ $reimbursement->week_start->format('M d') }}–{{ $reimbursement->week_end->format('M d, Y') }}
+    </h2>
+
+    <p class="proofs-meta">
+        Employee: <strong>{{ $reimbursement->user->name }}</strong>
+        &nbsp;|&nbsp;
+        Total Reimbursable: <strong>&#8369;{{ number_format($reimbursement->total_amount, 2) }}</strong>
+    </p>
+
+    <table class="proof-grid">
+
+        @php
+            $slice = $proofTickets->slice($page * 6, 6);
+        @endphp
+
+        @foreach($slice->chunk(3) as $rowTickets)
+        <tr>
+            @foreach($rowTickets as $ticket)
+            <td class="proof-item">
+
+                <div class="proof-meta">
+                    <strong>{{ $ticket->date->format('M d, Y') }}</strong>
+                    &nbsp;·&nbsp; &#8369;{{ number_format($ticket->amount, 2) }}<br>
+                    {{ $ticket->description }}
+                </div>
+
+                @if($ticket->proof_type === 'pdf')
+                    <p class="pdf-note">
+                        📎 <a href="{{ $ticket->proof_url }}" target="_blank">View PDF Receipt</a>
+                    </p>
+                @else
+                    <img src="{{ $ticket->proof_url }}">
                 @endif
 
-                <div class="proof-item">
-                    <div class="proof-meta">
-                        <strong>{{ $ticket->date->format('M d, Y') }}</strong>
-                        &nbsp;·&nbsp; ₱{{ number_format($ticket->amount, 2) }}<br>
-                        {{ $ticket->description }}
-                    </div>
-
-                    @if($ticket->proof_type === 'pdf')
-                        <p class="pdf-note">
-                            📎 <a href="{{ $ticket->proof_url }}" target="_blank">View PDF Receipt</a>
-                        </p>
-                    @else
-                        <img src="{{ $ticket->proof_url }}"
-                             alt="Proof {{ $ticket->date->format('M d, Y') }}">
-                    @endif
-                </div>
+            </td>
             @endforeach
-        </div>
-    </div>
-    @endif
+
+            {{-- Fill empty cells --}}
+            @for($i = count($rowTickets); $i < 3; $i++)
+                <td class="proof-item">&nbsp;</td>
+            @endfor
+
+        </tr>
+        @endforeach
+
+    </table>
+
+</div>
+
+@endfor
+@endif
 
 </body>
 </html>

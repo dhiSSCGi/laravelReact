@@ -9,6 +9,7 @@ use Cloudinary\Cloudinary;
 use Cloudinary\Configuration\Configuration;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TicketController extends Controller
 {
@@ -128,11 +129,25 @@ class TicketController extends Controller
         return redirect()->back()->with('success', 'Ticket deleted.');
     }
 
+    // public function generateForm(Reimbursement $reimbursement)
+    // {
+    //     abort_if($reimbursement->user_id !== auth()->id(), 403);
+    //     $reimbursement->load('tickets', 'user');
+
+    //     return view('reimbursement-form', compact('reimbursement'));
+    // }
     public function generateForm(Reimbursement $reimbursement)
     {
         abort_if($reimbursement->user_id !== auth()->id(), 403);
+
         $reimbursement->load('tickets', 'user');
 
-        return view('reimbursement-form', compact('reimbursement'));
+        $pdf = Pdf::loadView('reimbursement-form', compact('reimbursement'))
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+            ])
+            ->setPaper('a4', 'portrait');
+        return $pdf->download('reimbursement-form.pdf'); // download
     }
 }

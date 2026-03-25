@@ -146,7 +146,7 @@ export default function Dashboard({ reimbursements = [] }: DashboardProps) {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <span className="font-semibold text-green-600 dark:text-green-400">₱{week.total_amount.toFixed(2)}</span>
+                                        <span className="font-semibold text-green-600 dark:text-green-400">₱{week.total_amount}</span>
                                         <a
                                             href={route('reimbursements.generate-form', week.id)}
                                             target="_blank"
